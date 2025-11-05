@@ -410,6 +410,21 @@ filtrarProductos(){
 
 crearReportePinturas(){
 	echo -e $SEP
+
+    mkdir -p "./Datos" # -p sirve para crear la carpeta si no exite (evita errores si ya existe)
+	touch ./Datos/datos.csv
+
+	datosCSV="./Datos/datos.csv"
+
+	echo "Codigo,Tipo,Modelo,Descripcion,Cantidad,Precio" > "$datosCSV"
+
+	awk -F' - ' '{print $1","$2","$3","$4","$5","$6}' ./lista_productos.txt >> "$datosCSV"
+
+	echo -e "${GREEN}Reporte generado correctamente:${NC}"
+	
+	echo -e $SEP
+	cat "$datosCSV"
+	echo -e $SEP
 	menu
 }
 
