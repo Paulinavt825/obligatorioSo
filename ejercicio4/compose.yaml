@@ -1,0 +1,48 @@
+version: '3.8'
+
+# Define la red personalizada
+networks:
+  so_network:
+
+services:
+  # Servicio de la aplicación web Node.js
+  webapp:
+    # Construye la imagen a partir del Dockerfile en el directorio 'web'
+    build: ./web
+    # El nombre del servicio que Nginx usará para encontrar los contenedores
+    hostname: webapp
+    # Reiniciar el contenedor a menos que se detenga manualmente
+    restart: unless-stopped
+    # Depende de que el servicio de redis esté iniciado
+    depends_on:
+      - redis
+    # Conecta el contenedor a nuestra red personalizada
+    networks:
+      - so_network
+
+  # Servicio de Redis
+  redis:
+    image: "redis:8.2.3-alpine"
+    container_name: redis
+    hostname: redis
+    restart: unless-stopped
+    # Comando para iniciar redis con persistencia
+    # Guardar cada 60 segundos si hubo al menos una operación de escritura en ese plazo
+    command: redis-server --save 60 1
+    networks:
+      - so_network
+
+  # Servicio de Nginx como balanceador de carga
+  balanceador:
+    build: ./nginx
+    container_name: balanceador
+    hostname: balanceador
+    restart: unless-stopped
+    # Mapea el puerto 8080 del host al 80 del contenedor
+    ports:
+      - "8080:80"
+    # Depende de que el servicio webapp esté iniciado
+    depends_on:
+      - webapp
+    networks:
+      - so_network

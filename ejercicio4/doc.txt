@@ -1,13 +1,135 @@
-1- NODEJS
+1 - NODEJS
 
-para redireccionamiento de puertos: -p 5000:5000
+fran@piplup:~/obligatorioSo$ podman build -t web-app ejercicio4/web/
+STEP 1/7: FROM node:25-alpine
+STEP 2/7: WORKDIR /app
+--> cdd7ebdf3761
+STEP 3/7: COPY package*.json ./
+--> d35b85cc72e5
+STEP 4/7: RUN npm install
 
-fran@piplup:~/obligatorioSo$ podman run -d --name nodejs bee2db7ae575
-cac8690e534c51e93b7638f7f4ccce0d58465fa0148eef4790be251dda96c4ec
-fran@piplup:~/obligatorioSo$ podman container ls -a
-CONTAINER ID  IMAGE                                COMMAND               CREATED        STATUS                     PORTS                   NAMES
-cac8690e534c  bee2db7ae575                         npm start             3 seconds ago  Up 3 seconds               0.0.0.0:5000->5000/tcp  nodejs
+added 126 packages, and audited 127 packages in 981ms
 
-2- REDIS
+30 packages are looking for funding
+  run `npm fund` for details
 
-fran@piplup:~/obligatorioSo$ podman run --name redis -d docker.io/redis:8.2.3-alpine redis-server --save 60 1
+found 0 vulnerabilities
+--> b9e8b018bc84
+STEP 5/7: COPY . .
+--> a17f93ecbbe3
+STEP 6/7: EXPOSE 5000
+--> e0ff24cd3052
+STEP 7/7: CMD ["npm", "start"]
+COMMIT web-app
+--> 91bd27d253b4
+Successfully tagged localhost/web-app:latest
+91bd27d253b432da6c6ead1ca35d86f495d363fd11f3e298156e056c037d611c
+
+fran@piplup:~/obligatorioSo$ podman network create so_network
+
+fran@piplup:~/obligatorioSo$ podman run -d --name nodejs --network so_network -p 5000:5000 web-app
+
+2 - REDIS
+
+fran@piplup:~/obligatorioSo$ podman run --name redis -d --network so_network docker.io/redis:8.2.3-alpine redis-server --save 60 1
+
+fran@piplup:~/obligatorioSo$ podman ps
+CONTAINER ID  IMAGE                                 COMMAND               CREATED         STATUS         PORTS                   NAMES
+fe87c6b09978  localhost/web-app:latest              npm start             17 seconds ago  Up 18 seconds  0.0.0.0:5000->5000/tcp  nodejs
+83553bfd7aeb  docker.io/library/redis:8.2.3-alpine  redis-server --sa...  7 seconds ago   Up 8 seconds   6379/tcp                redis
+
+fran@piplup:~/obligatorioSo$ podman logs nodejs
+> os-todo-list@1.0.0 start
+> node server.js
+
+Sistema de Gestión de Tareas - SO escuchando en el puerto 5000
+
+3 - NGINX
+
+fran@piplup:~/obligatorioSo$ podman build -t nginx-lb ejercicio4/nginx/
+STEP 1/2: FROM nginx:1.29.3-alpine
+Resolved "nginx" as an alias (/etc/containers/registries.conf.d/000-shortnames.conf)
+Trying to pull docker.io/library/nginx:1.29.3-alpine...
+Getting image source signatures
+(...)
+Writing manifest to image destination
+STEP 2/2: COPY nginx.conf /etc/nginx/nginx.conf
+COMMIT nginx-lb
+--> 9e60b9210cd8
+Successfully tagged localhost/nginx-lb:latest
+9e60b9210cd8bb8a201a6615e5c0c2dccb2b884cca90ce86c1b6b86169b4a8dd
+
+fran@piplup:~/obligatorioSo$ podman stop nodejs && podman rm nodejs
+fran@piplup:~/obligatorioSo$ podman run -d --name web1 --network so_network web-app
+fran@piplup:~/obligatorioSo$ podman run -d --name web2 --network so_network web-app
+fran@piplup:~/obligatorioSo$ podman run -d --name balanceador -p 8080:80 --network so_network nginx-lb
+
+fran@piplup:~/obligatorioSo$ podman ps
+CONTAINER ID  IMAGE                                 COMMAND               CREATED         STATUS         PORTS                   NAMES
+83553bfd7aeb  docker.io/library/redis:8.2.3-alpine  redis-server --sa...  27 minutes ago  Up 21 minutes  6379/tcp                redis
+94aa7c829283  localhost/web-app:latest              npm start             14 minutes ago  Up 3 minutes   5000/tcp                web1
+001ee6e0b8eb  localhost/web-app:latest              npm start             14 minutes ago  Up 3 minutes   5000/tcp                web2
+def2e0cd9637  localhost/nginx-lb:latest             nginx -g daemon o...  5 minutes ago   Up 2 minutes   0.0.0.0:8080->80/tcp    balanceador
+
+4 - DOCKER COMPOSE
+
+fran@piplup:~/obligatorioSo/ejercicio4$ podman-compose build
+STEP 1/2: FROM nginx:1.29.3-alpine
+STEP 1/7: FROM node:25-alpine
+Resolved "nginx" as an alias (/etc/containers/registries.conf.d/000-shortnames.conf)
+Trying to pull docker.io/library/nginx:1.29.3-alpine...
+Resolved "node" as an alias (/etc/containers/registries.conf.d/000-shortnames.conf)
+Trying to pull docker.io/library/node:25-alpine...
+Getting image source signatures
+(...)
+Writing manifest to image destination
+STEP 2/7: WORKDIR /app
+--> cc0736135d67
+STEP 3/7: COPY package*.json ./
+COMMIT ejercicio4_balanceador
+--> 4e1b5f4ca87d
+Successfully tagged localhost/ejercicio4_balanceador:latest
+4e1b5f4ca87d8a51b3aece1ad48aa8578f549975435b374f43941fbff63d2e3a
+--> e5b52f523198
+STEP 4/7: RUN npm install
+
+added 126 packages, and audited 127 packages in 988ms
+
+30 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+--> 122ffae105b1
+STEP 5/7: COPY . .
+--> b1995e2764a7
+STEP 6/7: EXPOSE 5000
+--> 447ffbe1e5c6
+STEP 7/7: CMD ["npm", "start"]
+COMMIT ejercicio4_webapp
+--> 142c969de0d8
+Successfully tagged localhost/ejercicio4_webapp:latest
+142c969de0d8b1f0b8e3b10e51f2ac40567f360e26cd9e3b47d15e776ca162e7
+
+fran@piplup:~/obligatorioSo/ejercicio4$ podman compose up -d --scale webapp=3
+Trying to pull docker.io/library/redis:8.2.3-alpine...
+Getting image source signatures
+(...)
+Writing manifest to image destination
+181dc84c0e19c5d24114671e1c0836696e4bafeb3ed7a7a4472af13f50dd727d
+877b06a164da85a77eeaaea1c65b799c3327a25a59a2cd1e30b7ee69b1ca9d80
+17cb7c5bee7c5c8f18b92e3868f6e94d8b9887ae9f7b9bd7a5c2984ab2089f66
+1c032e65a72014ac752a524d103335d18dddba00bab821a920ef1552584984d9
+3ce574ebd1236ffda02b71cea2b01d0287554746dcc9e585744bd26fe42622c0
+redis
+ejercicio4_webapp_1
+ejercicio4_webapp_2
+ejercicio4_webapp_3
+balanceador
+
+fran@piplup:~/obligatorioSo/ejercicio4$ podman ps
+CONTAINER ID  IMAGE                                    COMMAND               CREATED         STATUS         PORTS                   NAMES
+181dc84c0e19  docker.io/library/redis:8.2.3-alpine     redis-server --sa...  53 seconds ago  Up 53 seconds  6379/tcp                redis
+877b06a164da  localhost/ejercicio4_webapp:latest       npm start             53 seconds ago  Up 53 seconds  5000/tcp                ejercicio4_webapp_1
+17cb7c5bee7c  localhost/ejercicio4_webapp:latest       npm start             53 seconds ago  Up 53 seconds  5000/tcp                ejercicio4_webapp_2
+1c032e65a720  localhost/ejercicio4_webapp:latest       npm start             53 seconds ago  Up 53 seconds  5000/tcp                ejercicio4_webapp_3
+3ce574ebd123  localhost/ejercicio4_balanceador:latest  nginx -g daemon o...  53 seconds ago  Up 52 seconds  0.0.0.0:8080->80/tcp    balanceador

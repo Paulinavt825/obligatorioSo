@@ -1,21 +1,21 @@
-# Use an official Node.js runtime as a parent image
+# Usa una imagen oficial de Node.js como imagen base
 FROM node:25-alpine
 
-# Set the working directory in the container
+# Establece el directorio de trabajo en el contenedor
 WORKDIR /app
 
-# Copy package.json and package-lock.json (if available)
+# Copia package.json y package-lock.json (si está disponible)
 COPY package*.json ./
 
-# Install app dependencies
+# Instala las dependencias de la aplicación
 RUN npm install
 
-# Copy the rest of the application source code
-# web/ (maquina host) -> app/ (contenedor)
+# Copia el resto del código fuente de la aplicación
+# web/ (máquina host) -> app/ (contenedor)
 COPY . .
 
-# Make port 5000 available to the world outside this container
+# Hace que el puerto 5000 esté disponible para el exterior del contenedor
 EXPOSE 5000
 
-# Define the command to run the app
+# Define el comando para ejecutar la aplicación
 CMD ["npm", "start"]
