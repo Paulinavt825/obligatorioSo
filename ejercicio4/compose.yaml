@@ -7,6 +7,7 @@ services:
   web1:
     image: web-img
     build: ./web
+    pull_policy: never
     hostname: web1
     restart: unless-stopped
     depends_on:
@@ -15,6 +16,7 @@ services:
       - so_network
   web2:
     image: web-img
+    pull_policy: never
     hostname: web2
     restart: unless-stopped
     depends_on:
@@ -37,6 +39,7 @@ services:
   balanceador:
     image: nginx-img
     build: ./nginx
+    pull_policy: never
     hostname: balanceador
     restart: unless-stopped
     # Mapea el puerto 8080 del host al 80 del contenedor
